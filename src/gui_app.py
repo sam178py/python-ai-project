@@ -13,7 +13,8 @@ import urllib.request
 import tkinter as tk
 from tkinter import messagebox, scrolledtext
 
-from app import AIBackend, EthicalHackingAssistant, SessionState
+from ai_backend import AIBackend
+from app import EthicalHackingAssistant, SessionState
 
 try:
     import pyttsx3  # type: ignore

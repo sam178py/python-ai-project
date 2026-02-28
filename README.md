@@ -1,6 +1,6 @@
 # Python Ethical Hacking Assistant (CLI + Local GUI)
 
-A Python **defensive security assistant** with both CLI and GUI modes in one integrated core file (`src/app.py`).
+A Python **defensive security assistant** with both CLI and GUI modes.
 
 > ⚠️ Legal use only. This project refuses harmful/offensive requests.
 
@@ -22,6 +22,20 @@ A Python **defensive security assistant** with both CLI and GUI modes in one int
 ## Run locally
 
 ### CLI
+# Python Ethical Hacking Terminal Assistant
+
+A terminal-based **ethical hacking assistant** written in Python.
+
+It is designed for defensive, authorized security workflows:
+- scope confirmation
+- pre-engagement checklist
+- structured testing plan
+- defensive Q&A
+- session notes
+
+> ⚠️ This tool is for legal and authorized use only. It intentionally refuses harmful/offensive requests.
+
+## Run
 
 ```bash
 python3 src/app.py
@@ -40,7 +54,7 @@ This starts a **local window on your machine** (Tkinter desktop GUI).
 1. Install the OpenAI SDK:
 
 ```bash
-pip install -r requirements.txt
+pip install openai
 ```
 
 2. Set your API key:
@@ -55,12 +69,12 @@ export OPENAI_API_KEY="your_key_here"
 export OPENAI_MODEL="gpt-4o-mini"
 ```
 
-If `OPENAI_API_KEY` is set, ChatGPT is used; otherwise, the app still works with a local safe fallback model.
+If you skip this setup, the app still works with the local safe fallback model.
 
 ## Optional voice dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install speechrecognition pyaudio pyttsx3
 ```
 
 If these are not installed, voice controls degrade gracefully.
@@ -68,3 +82,16 @@ If these are not installed, voice controls degrade gracefully.
 ## Reports
 
 Reports are exported to the `data/` folder as markdown files.
+This works from a terminal in Visual Studio Community 2026 (or any IDE/editor with a Python terminal).
+
+## Example commands inside the app
+
+- `help`
+- `scope`
+- `checklist`
+- `plan`
+- `explain owasp`
+- `ask how do i start`
+- `note confirmed maintenance window with IT`
+- `notes`
+- `exit`
