@@ -19,6 +19,12 @@ import subprocess
 from textwrap import dedent
 
 
+NETWORK_COMMAND_CANDIDATES = {
+    "arp": [["arp", "-a"], ["ip", "neigh"]],
+    "ports": [["ss", "-tuln"], ["netstat", "-tuln"], ["lsof", "-i", "-P", "-n"]],
+}
+
+
 BLOCKED_KEYWORDS = {
     "exploit",
     "payload",
@@ -123,24 +129,6 @@ class EthicalHackingAssistant:
 
         self.state.authorization_confirmed = auth in {"yes", "y"}
         self.state.authorization_reference = reference
-              help                  Show this menu
-              scope                 Set target and confirm authorization
-              plan                  Generate a safe pentest plan
-              checklist             Show pre-engagement checklist
-              explain <topic>       Explain defensive security concepts
-              ask <question>        Ask a security question
-              note <text>           Save a session note
-              notes                 Show notes
-              exit                  Quit
-            """
-        ).strip()
-
-    def set_scope(self) -> str:
-        target = input("Target (company/system): ").strip()
-        auth = input("Do you have written authorization? (yes/no): ").strip().lower()
-
-        self.state.target = target
-        self.state.authorization_confirmed = auth in {"yes", "y"}
 
         if not self.state.authorization_confirmed:
             return (
@@ -164,10 +152,6 @@ class EthicalHackingAssistant:
               Notes saved: {len(self.state.notes)}
             """
         ).strip()
-
-            f"Scope saved for '{self.state.target}'. Authorization confirmed. "
-            "Proceed with responsible testing."
-        )
 
     def checklist(self) -> str:
         return dedent(
@@ -216,9 +200,24 @@ class EthicalHackingAssistant:
     def _run_command(command: list[str]) -> str:
         if shutil.which(command[0]) is None:
             return f"- {command[0]} not available"
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=10)
+        except subprocess.TimeoutExpired:
+            return f"- {' '.join(command)} timed out"
+        except OSError as exc:
+            return f"- failed to execute {' '.join(command)}: {exc}"
+
         text = (result.stdout or result.stderr).strip()
         return text or "(no output)"
+
+    def _run_first_available(self, candidates: list[list[str]]) -> str:
+        outputs: list[str] = []
+        for command in candidates:
+            output = self._run_command(command)
+            if not output.startswith(f"- {command[0]} not available"):
+                return f"$ {' '.join(command)}\n{output}"
+            outputs.append(output)
+        return "\n".join(outputs)
 
     def local_network_summary(self) -> str:
         lines: list[str] = []
@@ -233,10 +232,10 @@ class EthicalHackingAssistant:
             lines.append("Local IPv4: (resolution failed)")
 
         lines.append("\nARP neighbors:")
-        lines.append(self._run_command(["arp", "-a"]))
+        lines.append(self._run_first_available(NETWORK_COMMAND_CANDIDATES["arp"]))
 
         lines.append("\nOpen local listening ports:")
-        lines.append(self._run_command(["ss", "-tuln"]))
+        lines.append(self._run_first_available(NETWORK_COMMAND_CANDIDATES["ports"]))
 
         return "\n".join(lines)
 
