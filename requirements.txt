@@ -3,3 +3,7 @@ pandas
 scikit-learn
 torch
 opencv-python
+openai
+SpeechRecognition
+pyttsx3
+pyaudio
