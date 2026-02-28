@@ -1,97 +1,79 @@
-# Python Ethical Hacking Assistant (CLI + Local GUI)
+# python-ai-project
+My AI project using Python and Codex
+# Python Ethical Hacking Assistant (Unified Core)
 
-A Python **defensive security assistant** with both CLI and GUI modes.
+A Python **defensive security assistant** with CLI and local GUI, both powered by one unified core file: `src/app.py`.
 
-> ⚠️ Legal use only. This project refuses harmful/offensive requests.
+> ⚠️ Legal use only. This assistant refuses offensive/harmful cybersecurity requests.
 
-## Features
+## What is unified now
 
-- Local GUI app (Tkinter) and CLI mode
-- Target IP/domain capture and validation
-- Ping checks and local network visibility
-- Scope + authorization tracking
-- Checklist, planning, notes, and report export
-- "Normal AI" chat behavior in GUI:
-  - Uses OpenAI chat model if `OPENAI_API_KEY` is set
-  - Falls back to built-in local safe responses if no API key
-- Optional voice input and voice output in GUI
-- Basic internet tools in GUI chat:
-  - `web <url>` fetch preview
-  - `webai <url> | <question>` fetch + AI summary/Q&A
+- AI engine + security workflow logic are in `src/app.py`
+- CLI mode runs from `src/app.py`
+- GUI mode also runs from `src/app.py --gui`
+- `src/gui_app.py` is now only a small compatibility launcher
 
-## Run locally
-
-### CLI
-# Python Ethical Hacking Terminal Assistant
-
-A terminal-based **ethical hacking assistant** written in Python.
-
-It is designed for defensive, authorized security workflows:
-- scope confirmation
-- pre-engagement checklist
-- structured testing plan
-- defensive Q&A
-- session notes
-
-> ⚠️ This tool is for legal and authorized use only. It intentionally refuses harmful/offensive requests.
-
-## Run
+## Install dependencies
 
 ```bash
-python3 src/app.py
+python3 -m pip install -r requirements.txt
 ```
 
-### GUI (local desktop app)
+Voice dependencies included in `requirements.txt`:
+- `SpeechRecognition`
+- `pyttsx3`
+- `pyaudio`
 
-```bash
-python3 src/gui_app.py
-```
+AI dependency included in `requirements.txt`:
+- `openai`
 
-This starts a **local window on your machine** (Tkinter desktop GUI).
-
-## Enable "normal AI" model responses
-
-1. Install the OpenAI SDK:
-
-```bash
-pip install openai
-```
-
-2. Set your API key:
+## Set ChatGPT API key
 
 ```bash
 export OPENAI_API_KEY="your_key_here"
 ```
 
-3. Optional model override (default: `gpt-4o-mini`):
+Optional model override:
 
 ```bash
 export OPENAI_MODEL="gpt-4o-mini"
 ```
 
-If you skip this setup, the app still works with the local safe fallback model.
+If the key is set and `openai` is installed, ChatGPT is used. Otherwise local safe fallback is used.
 
-## Optional voice dependencies
+## Run
+
+### CLI mode
 
 ```bash
-pip install speechrecognition pyaudio pyttsx3
+python3 src/app.py
 ```
 
-If these are not installed, voice controls degrade gracefully.
+### GUI mode (local desktop)
 
-## Reports
+```bash
+python3 src/app.py --gui
+```
 
-Reports are exported to the `data/` folder as markdown files.
-This works from a terminal in Visual Studio Community 2026 (or any IDE/editor with a Python terminal).
+(Compatibility command also works: `python3 src/gui_app.py`.)
 
-## Example commands inside the app
+## Useful commands
 
 - `help`
 - `scope`
-- `checklist`
-- `plan`
-- `explain owasp`
-- `ask how do i start`
-- `note confirmed maintenance window with IT`
-- `notes`
-- `exit`
+- `target 192.168.1.10`
+- `status`
+- `ping 8.8.8.8`
+- `local-network`
+- `ask <question>` / `ai <question>`
+- `note <text>` / `notes`
+- `export-report`
+
+## Internet-enabled prompts in GUI chat
+
+- `web <url>` (fetch preview)
+- `webai <url> | <question>` (fetch and answer with context)
+
+## Reports
+
+Reports are exported to `data/` as markdown files.
