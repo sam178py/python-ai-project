@@ -123,6 +123,24 @@ class EthicalHackingAssistant:
 
         self.state.authorization_confirmed = auth in {"yes", "y"}
         self.state.authorization_reference = reference
+              help                  Show this menu
+              scope                 Set target and confirm authorization
+              plan                  Generate a safe pentest plan
+              checklist             Show pre-engagement checklist
+              explain <topic>       Explain defensive security concepts
+              ask <question>        Ask a security question
+              note <text>           Save a session note
+              notes                 Show notes
+              exit                  Quit
+            """
+        ).strip()
+
+    def set_scope(self) -> str:
+        target = input("Target (company/system): ").strip()
+        auth = input("Do you have written authorization? (yes/no): ").strip().lower()
+
+        self.state.target = target
+        self.state.authorization_confirmed = auth in {"yes", "y"}
 
         if not self.state.authorization_confirmed:
             return (
@@ -146,6 +164,10 @@ class EthicalHackingAssistant:
               Notes saved: {len(self.state.notes)}
             """
         ).strip()
+
+            f"Scope saved for '{self.state.target}'. Authorization confirmed. "
+            "Proceed with responsible testing."
+        )
 
     def checklist(self) -> str:
         return dedent(
