@@ -9,6 +9,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
+import ipaddress
+import platform
+import re
+import shutil
+import socket
+import subprocess
 from textwrap import dedent
 
 
@@ -24,6 +31,8 @@ BLOCKED_KEYWORDS = {
     "privilege escalation",
 }
 
+DOMAIN_REGEX = re.compile(r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$")
+
 
 @dataclass
 class SessionState:
@@ -32,6 +41,7 @@ class SessionState:
     user_name: str
     target: str = ""
     authorization_confirmed: bool = False
+    authorization_reference: str = ""
     notes: list[str] = field(default_factory=list)
 
 
@@ -59,6 +69,60 @@ class EthicalHackingAssistant:
         return dedent(
             """
             Available commands:
+              help                          Show this menu
+              scope                         Set target and confirm authorization
+              target <ip-or-domain>         Set target quickly with validation
+              status                        Show current session status
+              ping <ip-or-domain>           Ping a host for basic reachability
+              local-network                 Show local IPs, ARP neighbors, and open local ports
+              plan                          Generate a safe pentest plan
+              checklist                     Show pre-engagement checklist
+              explain <topic>               Explain defensive security concepts
+              ask <question>                Ask a security question
+              note <text>                   Save a session note
+              notes                         Show notes
+              export-report [filename]      Export session report to data/
+              exit                          Quit
+            """
+        ).strip()
+
+    @staticmethod
+    def _is_valid_target(value: str) -> bool:
+        candidate = value.strip()
+        if not candidate:
+            return False
+
+        try:
+            ipaddress.ip_address(candidate)
+            return True
+        except ValueError:
+            pass
+
+        return bool(DOMAIN_REGEX.match(candidate))
+
+    def set_target(self, target: str) -> str:
+        target = target.strip()
+        if not target:
+            return "Please provide a target IP or domain, e.g. 'target 192.168.1.10'."
+
+        if not self._is_valid_target(target):
+            return "Invalid target format. Use a valid IPv4/IPv6 address or domain."
+
+        self.state.target = target
+        return f"Target set to '{target}'."
+
+    def set_scope(self) -> str:
+        target = input("Target (IP/domain/company): ").strip()
+        auth = input("Do you have written authorization? (yes/no): ").strip().lower()
+        reference = input("Authorization reference (ticket/email/contract): ").strip()
+
+        if target:
+            if not self._is_valid_target(target):
+                return "Scope not saved: target must be a valid IP or domain."
+            self.state.target = target
+
+        self.state.authorization_confirmed = auth in {"yes", "y"}
+        self.state.authorization_reference = reference
               help                  Show this menu
               scope                 Set target and confirm authorization
               plan                  Generate a safe pentest plan
@@ -85,6 +149,22 @@ class EthicalHackingAssistant:
             )
 
         return (
+            f"Scope saved for '{self.state.target or 'unspecified target'}'. Authorization confirmed. "
+            "Proceed with responsible testing."
+        )
+
+    def status(self) -> str:
+        return dedent(
+            f"""
+            Session status:
+              User: {self.state.user_name}
+              Target: {self.state.target or '(not set)'}
+              Authorization: {'confirmed' if self.state.authorization_confirmed else 'unverified'}
+              Authorization ref: {self.state.authorization_reference or '(not set)'}
+              Notes saved: {len(self.state.notes)}
+            """
+        ).strip()
+
             f"Scope saved for '{self.state.target}'. Authorization confirmed. "
             "Proceed with responsible testing."
         )
@@ -101,6 +181,64 @@ class EthicalHackingAssistant:
               6. Data handling and disclosure plan agreed.
             """
         ).strip()
+
+    def ping_target(self, target: str) -> str:
+        host = target.strip() or self.state.target
+        if not host:
+            return "Provide a host with 'ping <ip-or-domain>' or set one using 'target'."
+
+        if not self._is_valid_target(host):
+            return "Invalid host format. Use a valid IPv4/IPv6 address or domain."
+
+        if shutil.which("ping") is None:
+            return "'ping' command is not available in this environment."
+
+        count_flag = "-n" if platform.system().lower() == "windows" else "-c"
+        try:
+            result = subprocess.run(
+                ["ping", count_flag, "4", host],
+                capture_output=True,
+                text=True,
+                timeout=15,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            return f"Ping timed out for {host}."
+
+        output = (result.stdout or result.stderr).strip()
+        if not output:
+            output = "No ping output was returned."
+
+        title = f"Ping results for {host} (exit code {result.returncode}):"
+        return f"{title}\n{output}"
+
+    @staticmethod
+    def _run_command(command: list[str]) -> str:
+        if shutil.which(command[0]) is None:
+            return f"- {command[0]} not available"
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        text = (result.stdout or result.stderr).strip()
+        return text or "(no output)"
+
+    def local_network_summary(self) -> str:
+        lines: list[str] = []
+
+        hostname = socket.gethostname()
+        lines.append(f"Hostname: {hostname}")
+
+        try:
+            host_ips = sorted({entry[4][0] for entry in socket.getaddrinfo(hostname, None) if entry[0] == socket.AF_INET})
+            lines.append(f"Local IPv4: {', '.join(host_ips) if host_ips else '(none found)'}")
+        except socket.gaierror:
+            lines.append("Local IPv4: (resolution failed)")
+
+        lines.append("\nARP neighbors:")
+        lines.append(self._run_command(["arp", "-a"]))
+
+        lines.append("\nOpen local listening ports:")
+        lines.append(self._run_command(["ss", "-tuln"]))
+
+        return "\n".join(lines)
 
     def plan(self) -> str:
         target = self.state.target or "(no target set)"
@@ -161,6 +299,9 @@ class EthicalHackingAssistant:
                 "Try asking about risk reduction, hardening, monitoring, or reporting."
             )
 
+        if "hack" in text:
+            return "I can't help with hacking. I can help with legal security testing workflows and reporting."
+
         if "start" in text or "begin" in text:
             return "Start with 'scope', then 'checklist', then 'plan'. Keep evidence and logs for every action."
 
@@ -185,6 +326,38 @@ class EthicalHackingAssistant:
             return "No notes yet."
         return "\n".join(self.state.notes)
 
+    def export_report(self, filename: str = "") -> str:
+        safe_name = (filename.strip() or f"report-{datetime.now().strftime('%Y%m%d-%H%M%S')}.md").replace("/", "-")
+        if not safe_name.endswith(".md"):
+            safe_name += ".md"
+
+        output_dir = Path("data")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        path = output_dir / safe_name
+
+        content = dedent(
+            f"""
+            # Ethical Security Session Report
+
+            - Generated: {datetime.now().isoformat(timespec='seconds')}
+            - Analyst: {self.state.user_name}
+            - Target: {self.state.target or '(not set)'}
+            - Authorization: {'confirmed' if self.state.authorization_confirmed else 'unverified'}
+            - Authorization reference: {self.state.authorization_reference or '(not set)'}
+
+            ## Notes
+            {chr(10).join(f'- {n}' for n in self.state.notes) if self.state.notes else '- No notes recorded.'}
+
+            ## Next Actions
+            - Validate findings with approved tooling.
+            - Prioritize remediation by risk.
+            - Re-test after fixes.
+            """
+        ).strip() + "\n"
+
+        path.write_text(content, encoding="utf-8")
+        return f"Report exported: {path}"
+
 
 def run() -> None:
     name = input("Your name: ").strip() or "Analyst"
@@ -203,6 +376,14 @@ def run() -> None:
             print(assistant.help_text())
         elif command == "scope":
             print(assistant.set_scope())
+        elif command == "target":
+            print(assistant.set_target(argument))
+        elif command == "status":
+            print(assistant.status())
+        elif command == "ping":
+            print(assistant.ping_target(argument))
+        elif command == "local-network":
+            print(assistant.local_network_summary())
         elif command == "checklist":
             print(assistant.checklist())
         elif command == "plan":
@@ -215,6 +396,8 @@ def run() -> None:
             print(assistant.add_note(argument))
         elif command == "notes":
             print(assistant.list_notes())
+        elif command == "export-report":
+            print(assistant.export_report(argument))
         elif command == "exit":
             print("Goodbye. Stay legal, safe, and ethical.")
             break
